@@ -29,3 +29,5 @@ Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/survey/get-by-slug/{survey:slug}', [SurveyController::class, 'getBySlug']);
 Route::post('/survey/{survey}/answer', [SurveyController::class, 'storeAnswer']);
+Route::post('/password/email', [AuthController::class, 'sendResetLinkEmail']);
+Route::post('/password/reset', [AuthController::class, 'resetPassword']);

@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\QuestionTypeEnum;
 use App\Http\Requests\StoreSurveyAnswerRequest;
-use App\Http\Resources\SurveyResource;
-use App\Models\Survey;
 use App\Http\Requests\StoreSurveyRequest;
 use App\Http\Requests\UpdateSurveyRequest;
+use App\Http\Resources\SurveyResource;
+use App\Models\Survey;
 use App\Models\SurveyAnswer;
 use App\Models\SurveyQuestion;
 use App\Models\SurveyQuestionAnswer;
@@ -15,16 +14,12 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Enum;
 use Symfony\Component\HttpFoundation\Request;
 
 class SurveyController extends Controller
 {
     /**
      * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
     {
@@ -39,9 +34,6 @@ class SurveyController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param  \App\Http\Requests\StoreSurveyRequest  $request
-     * @return \Illuminate\Http\Response
      */
     public function store(StoreSurveyRequest $request)
     {
@@ -66,9 +58,6 @@ class SurveyController extends Controller
 
     /**
      * Display the specified resource.
-     *
-     * @param  \App\Models\Survey  $survey
-     * @return \Illuminate\Http\Response
      */
     public function show(Survey $survey, Request $request)
     {
@@ -81,10 +70,6 @@ class SurveyController extends Controller
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param  \App\Http\Requests\UpdateSurveyRequest  $request
-     * @param  \App\Models\Survey  $survey
-     * @return \Illuminate\Http\Response
      */
     public function update(UpdateSurveyRequest $request, Survey $survey)
     {
@@ -138,9 +123,6 @@ class SurveyController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Survey  $survey
-     * @return \Illuminate\Http\Response
      */
     public function destroy(Survey $survey, Request $request)
     {
@@ -160,56 +142,48 @@ class SurveyController extends Controller
         return response('', 204);
     }
 
-
     /**
-     * Save image in local file system and return saved image path
-     *
-     * @param $image
-     * @throws \Exception
-     * @author Zura Sekhniashvili <zurasekhniashvili@gmail.com>
+     * Save image in local file system and return saved image path.
+     * This handles both base64 and FormData file uploads.
      */
     private function saveImage($image)
     {
-        // Check if image is valid base64 string
-        if (preg_match('/^data:image\/(\w+);base64,/', $image, $type)) {
-            // Take out the base64 encoded text without mime type
+        if (gettype($image) === 'string' && preg_match('/^data:image\/(\w+);base64,/', $image, $type)) {
+            // Handle base64 image upload
             $image = substr($image, strpos($image, ',') + 1);
-            // Get file extension
-            $type = strtolower($type[1]); // jpg, png, gif
+            $type = strtolower($type[1]);
 
-            // Check if file is an image
             if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
-                throw new \Exception('invalid image type');
+                throw new \Exception('Invalid image type');
             }
             $image = str_replace(' ', '+', $image);
             $image = base64_decode($image);
 
             if ($image === false) {
-                throw new \Exception('base64_decode failed');
+                throw new \Exception('Base64 decode failed');
             }
+
+            $dir = 'images/';
+            $file = Str::random() . '.' . $type;
+            $absolutePath = public_path($dir);
+            $relativePath = $dir . $file;
+            if (!File::exists($absolutePath)) {
+                File::makeDirectory($absolutePath, 0755, true);
+            }
+            file_put_contents($absolutePath . $file, $image);
+
+            return $relativePath;
+        } elseif (is_file($image)) {
+            // Handle FormData file upload
+            $path = $image->store('images', 'public');
+            return $path;
         } else {
-            throw new \Exception('did not match data URI with image data');
+            throw new \Exception('Invalid image input');
         }
-
-        $dir = 'images/';
-        $file = Str::random() . '.' . $type;
-        $absolutePath = public_path($dir);
-        $relativePath = $dir . $file;
-        if (!File::exists($absolutePath)) {
-            File::makeDirectory($absolutePath, 0755, true);
-        }
-        file_put_contents($relativePath, $image);
-
-        return $relativePath;
     }
 
     /**
-     * Create a question and return
-     *
-     * @param $data
-     * @return mixed
-     * @throws \Illuminate\Validation\ValidationException
-     * @author Zura Sekhniashvili <zurasekhniashvili@gmail.com>
+     * Create a question and return it.
      */
     private function createQuestion($data)
     {
@@ -218,9 +192,7 @@ class SurveyController extends Controller
         }
         $validator = Validator::make($data, [
             'question' => 'required|string',
-            'type' => [
-                'required', new Enum(QuestionTypeEnum::class)
-            ],
+            'type' => 'required|in:text,checkbox,radio,textarea',  // Assuming these types
             'description' => 'nullable|string',
             'data' => 'present',
             'survey_id' => 'exists:App\Models\Survey,id'
@@ -230,13 +202,7 @@ class SurveyController extends Controller
     }
 
     /**
-     * Update a question and return true or false
-     *
-     * @param \App\Models\SurveyQuestion $question
-     * @param                            $data
-     * @return bool
-     * @throws \Illuminate\Validation\ValidationException
-     * @author Zura Sekhniashvili <zurasekhniashvili@gmail.com>
+     * Update a question and return true or false.
      */
     private function updateQuestion(SurveyQuestion $question, $data)
     {
@@ -246,7 +212,7 @@ class SurveyController extends Controller
         $validator = Validator::make($data, [
             'id' => 'exists:App\Models\SurveyQuestion,id',
             'question' => 'required|string',
-            'type' => ['required', new Enum(QuestionTypeEnum::class)],
+            'type' => 'required|in:text,checkbox,radio,textarea',  // Assuming these types
             'description' => 'nullable|string',
             'data' => 'present',
         ]);
@@ -254,6 +220,9 @@ class SurveyController extends Controller
         return $question->update($validator->validated());
     }
 
+    /**
+     * Get a survey by its slug.
+     */
     public function getBySlug(Survey $survey)
     {
         if (!$survey->status) {
@@ -269,6 +238,9 @@ class SurveyController extends Controller
         return new SurveyResource($survey);
     }
 
+    /**
+     * Store the survey answers.
+     */
     public function storeAnswer(StoreSurveyAnswerRequest $request, Survey $survey)
     {
         $validated = $request->validated();
@@ -280,7 +252,7 @@ class SurveyController extends Controller
         ]);
 
         foreach ($validated['answers'] as $questionId => $answer) {
-            $question = SurveyQuestion::where(['id' => $questionId, 'survey_id' => $survey->id])->get();
+            $question = SurveyQuestion::where(['id' => $questionId, 'survey_id' => $survey->id])->first();
             if (!$question) {
                 return response("Invalid question ID: \"$questionId\"", 400);
             }
@@ -291,7 +263,7 @@ class SurveyController extends Controller
                 'answer' => is_array($answer) ? json_encode($answer) : $answer
             ];
 
-            $questionAnswer = SurveyQuestionAnswer::create($data);
+            SurveyQuestionAnswer::create($data);
         }
 
         return response("", 201);
