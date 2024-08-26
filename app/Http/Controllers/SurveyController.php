@@ -96,7 +96,7 @@ class SurveyController extends Controller
         $newIds = Arr::pluck($data['questions'], 'id');
         // Find questions to delete
         $toDelete = array_diff($existingIds, $newIds);
-        //Find questions to add
+        // Find questions to add
         $toAdd = array_diff($newIds, $existingIds);
 
         // Delete questions by $toDelete array
@@ -236,6 +236,29 @@ class SurveyController extends Controller
         }
 
         return new SurveyResource($survey);
+    }
+
+    /**
+     * Get a survey with answers.
+     */
+    public function getSurveyAnswers($id)
+    {
+        $survey = Survey::with('questions.answers')->find($id);
+        if (!$survey) {
+            return response()->json(['message' => 'Survey not found'], 404);
+        }
+        return new SurveyResource($survey);
+    }
+
+    /**
+     * Define the relationships in Survey model.
+     */
+    public function questions() {
+        return $this->hasMany(SurveyQuestion::class);
+    }
+    
+    public function answers() {
+        return $this->hasManyThrough(SurveyQuestionAnswer::class, SurveyAnswer::class);
     }
 
     /**

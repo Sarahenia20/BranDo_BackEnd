@@ -31,3 +31,4 @@ Route::get('/survey/get-by-slug/{survey:slug}', [SurveyController::class, 'getBy
 Route::post('/survey/{survey}/answer', [SurveyController::class, 'storeAnswer']);
 Route::post('/password/email', [AuthController::class, 'sendResetLinkEmail']);
 Route::post('/password/reset', [AuthController::class, 'resetPassword']);
+Route::get('/survey/{id}/answers', [SurveyController::class, 'getSurveyAnswers']);
