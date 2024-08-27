@@ -13,7 +13,7 @@ class StoreSurveyAnswerRequest extends FormRequest
      */
     public function authorize()
     {
-        return true;
+        return true; // You may add authorization logic here if needed
     }
 
     /**
@@ -24,7 +24,9 @@ class StoreSurveyAnswerRequest extends FormRequest
     public function rules()
     {
         return [
-            'answers' => 'required|array'
+            'answers' => 'required|array',
+            'answers.*.survey_question_id' => 'required|exists:survey_questions,id',
+            'answers.*.answer' => 'required|string',
         ];
     }
 }

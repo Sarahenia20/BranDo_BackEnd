@@ -23,7 +23,7 @@ class SurveyController extends Controller
      */
     public function index(Request $request)
     {
-        $user = $request->user();
+        $user = auth()->user();
 
         return SurveyResource::collection(
             Survey::where('user_id', $user->id)
@@ -61,7 +61,7 @@ class SurveyController extends Controller
      */
     public function show(Survey $survey, Request $request)
     {
-        $user = $request->user();
+        $user = auth()->user();
         if ($user->id !== $survey->user_id) {
             return abort(403, 'Unauthorized action');
         }
@@ -126,7 +126,7 @@ class SurveyController extends Controller
      */
     public function destroy(Survey $survey, Request $request)
     {
-        $user = $request->user();
+        $user = auth()->user();
         if ($user->id !== $survey->user_id) {
             return abort(403, 'Unauthorized action.');
         }
